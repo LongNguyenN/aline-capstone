@@ -1,0 +1,116 @@
+Parameters:
+  KeyName:
+    Default: ansible2
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  ImageName:
+    Default: ami-0aa7d40eeae50c9a9
+    Description: The ami to run Jenkins
+    Type: String
+
+Resources:
+  JenkinsInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageName
+      InstanceType: t3.medium
+      UserData: 
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            UPATH=/home/ec2-user
+            touch $UPATH/foo
+            echo Hello World! > $UPATH/foo
+            yum update -y
+            sudo amazon-linux-extras install -y nginx1
+            sudo systemctl start nginx
+            sudo yum install -y docker
+            sudo systemctl start docker
+            sudo docker network create jenkins
+            sudo docker run --name jenkins-docker --rm --detach \
+              --privileged --network jenkins --network-alias docker \
+              --env DOCKER_TLS_CERTDIR=/certs \
+              --volume jenkins-docker-certs:/certs/client \
+              --volume jenkins-data:/var/jenkins_home \
+              --publish 2376:2376 \
+              docker:dind --storage-driver overlay2
+            sudo docker run --name jenkins --restart=on-failure --detach \
+              --network jenkins --env DOCKER_HOST=tcp://docker:2376 \
+              --env DOCKER_CERT_PATH=/certs/client --env DOCKER_TLS_VERIFY=1 \
+              --publish 8080:8080 --publish 50000:50000 \
+              --volume jenkins-data:/var/jenkins_home \
+              --volume jenkins-docker-certs:/certs/client:ro \
+              jenkins:2.60.3
+            sudo curl -L https://github.com/docker/compose/releases/download/1.21.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+            echo "version: '3'
+
+            services:
+              sonarqube:
+                image: sonarqube:community
+                depends_on:
+                  - db
+                environment:
+                  SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+                  SONAR_JDBC_USERNAME: sonar
+                  SONAR_JDBC_PASSWORD: sonar
+                volumes:
+                  - sonarqube_data:/opt/sonarqube/data
+                  - sonarqube_extensions:/opt/sonarqube/extensions
+                  - sonarqube_logs:/opt/sonarqube/logs
+                ports:
+                  - '9000:9000'
+              db:
+                image: postgres:12
+                environment:
+                  POSTGRES_USER: sonar
+                  POSTGRES_PASSWORD: sonar
+                volumes:
+                  - postgresql:/var/lib/postgresql
+                  - postgresql_data:/var/lib/postgresql/data
+
+            volumes:
+              sonarqube_data:
+              sonarqube_extensions:
+              sonarqube_logs:
+              postgresql:
+              postgresql_data:" > $UPATH/docker-compose.yaml
+            cd $UPATH
+            sudo sysctl -w vm.max_map_count=262144
+            sudo docker-compose up -d
+  InstanceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 67.183.144.0/26
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 67.183.144.0/26
+        - IpProtocol: tcp
+          FromPort: 9000
+          ToPort: 9000
+          CidrIp: 67.183.144.0/26
+
+Outputs:
+  WebsiteURL:
+    Value: !Join
+      - ''
+      - - ssh -i "~/.ssh/ansible2.pem" ubuntu@
+        - !GetAtt JenkinsInstance.PublicDnsName
+    Description: The URL of the website
+  Blank:
+    Value: An Empty String
+    Description: An Empty String

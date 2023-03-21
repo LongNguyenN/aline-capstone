@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+          - containerPort: 80
+        env:
+        - name: APP_PORT
+          value: '8083'
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: mysql-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: mysql-password
+        - name: ENCRYPT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: encrypt-secret-key
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: jwt-secret-key
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: db-host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: db-port
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: db-name
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    #app.kubernetes.io/name: nginx
+          app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: LoadBalancer
+status:
+        loadBalancer:
+                ingress:
+                        - ip: adc1f7a11c5604167ad37c70b515bfb6-1091825041.us-east-1.elb.amazonaws.com

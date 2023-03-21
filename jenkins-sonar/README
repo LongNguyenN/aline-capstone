@@ -1,0 +1,2 @@
+Use the command below to build the jenkins image.
+docker build -t myjenkins-blueocean:2.361.4-1 .

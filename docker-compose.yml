@@ -1,0 +1,51 @@
+version: "2"
+#x-aws-vpc: "vpc-0f8bfa1deb26e661a"
+#x-aws-cluster: "ln-ecs"
+
+services:
+
+  user:
+    image: ${REGISTRY}/user:${SERVICE_TAG} 
+    env_file:
+        - .env
+    environment:
+        APP_PORT: 8070
+    ports:
+      - 8070:8070
+
+  underwriter:
+    image: ${REGISTRY}/underwriter:${SERVICE_TAG}
+    env_file:
+        - .env
+    environment:
+        APP_PORT: 8071
+    ports:
+      - 8071:8071
+
+  transaction:
+    image: ${REGISTRY}/transaction:${SERVICE_TAG}
+    env_file:
+        - .env
+    environment:
+        APP_PORT: 8073
+    ports:
+      - 8073:8073
+
+  bank:
+    image: ${REGISTRY}/bank:${SERVICE_TAG}
+    env_file:
+        - .env
+    environment:
+        APP_PORT: 8083
+    ports:
+      - 8083:8083
+
+  landing-portal:
+    image: ${REGISTRY}/landing-portal:alpha
+    ports:
+      - 3000:3000
+
+  admin-portal:
+    image: ${REGISTRY}/admin-portal:light 
+    ports:
+      - 3001:3001

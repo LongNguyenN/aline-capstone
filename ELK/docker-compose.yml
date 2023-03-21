@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  esnode:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
+
+  kib:
+    image: docker.elastic.co/kibana/kibana:8.6.1
+    ports:
+      - "5601:5601"
+

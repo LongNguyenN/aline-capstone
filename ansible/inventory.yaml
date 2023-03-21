@@ -1,0 +1,12 @@
+virtualmachines:
+  hosts:
+    vm01:
+      ansible_host: 18.118.205.224
+    vm02:
+      ansible_host: 3.144.6.173
+    vm03:
+      ansible_host: 3.140.188.18
+  vars:
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: "~/.ssh/ansible2.pem"
+    ansible_python_interpreter: /usr/bin/python3

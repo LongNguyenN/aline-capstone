@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: landing-portal-deployment
+  labels:
+    app: landing-portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: landing-portal
+  template:
+    metadata:
+      labels:
+        app: landing-portal
+    spec:
+      containers:
+      - name: landing-portal
+        image: longngu/landing-portal:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: APP_PORT
+          value: '8083'
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: mysql-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: mysql-password
+        - name: ENCRYPT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: encrypt-secret-key
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aline-secret
+              key: jwt-secret-key
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: db-host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: db-port
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: db-name
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: landing-portal-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: landing-portal
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 30000
+status:
+        loadBalancer:
+                ingress:
+                        - ip: adc1f7a11c5604167ad37c70b515bfb6-1091825041.us-east-1.elb.amazonaws.com
